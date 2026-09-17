@@ -1,0 +1,8 @@
+name: MoxueBridge
+version: '${version}'
+main: io.github.neko0115.moxuebridge.MoxueBridgePlugin
+api-version: '1.21'
+author: neko0115
+description: Read-only runtime capability bridge for Moxue clients.
+libraries:
+  - com.google.code.gson:gson:2.11.0
