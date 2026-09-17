@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     java
 }
 
@@ -15,11 +15,13 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     compileOnly("com.google.code.gson:gson:2.11.0")
 
     testImplementation(platform("org.junit:junit-bom:5.11.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("com.google.code.gson:gson:2.11.0")
+    testImplementation("org.mockito:mockito-core:5.14.2")
 }
 
 java {
