@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Ores",
+    "blocks": [
+      "#c:ores"
+    ],
+    "tools": [
+      "#minecraft:pickaxes"
+    ],
+    "override": {}
+  },
+  {
+    "name": "Logs",
+    "blocks": [
+      "#minecraft:logs"
+    ],
+    "tools": [
+      "#minecraft:axes"
+    ],
+    "override": {}
+  }
+]

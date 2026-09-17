@@ -1,0 +1,15 @@
+{
+  "cooldown": 20,
+  "mustSneak": true,
+  "delay": 0,
+  "maxChain": 100,
+  "needCorrectTool": true,
+  "searchRadius": 1,
+  "permissionRestricted": false,
+  "mergeItemDrops": false,
+  "autoUpdate": false,
+  "decreaseDurability": true,
+  "hungerPerBlock": 0.0,
+  "miningSpeedModifier": 0.0,
+  "debug": false
+}
