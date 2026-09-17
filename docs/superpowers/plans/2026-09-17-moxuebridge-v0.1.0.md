@@ -15,13 +15,14 @@
 - Target server: Paper 1.21.1 on Java 21.
 - Version 0.1.0 is strictly read-only: no console execution, OP, permissions changes, kick/ban, item give, teleport, world mutation, or plugin config writes other than MoxueBridge's own generated token/config.
 - API default bind is `0.0.0.0:8766` because DC_BOT runs on a different LAN computer.
-- Every `/api/v1/*` endpoint requires `Authorization: Bearer <token>`.
+- Every `/api/v1/*` endpoint requires an `Authorization: Bearer ...` header.
 - The bearer token is generated at first run with `SecureRandom`, saved only in MoxueBridge runtime config, and never committed or printed in full.
 - Playit must never expose TCP 8766.
 - Paper runtime state is authoritative; a JAR on disk alone never proves a plugin or capability is available.
 - HTTP worker threads may only read immutable snapshots; Bukkit/Paper API discovery runs on the Paper main thread.
 - Unknown plugins may expose trustworthy metadata/declared commands but must not produce invented deep capabilities.
 - VeinMiner current baseline: `mustSneak=true`, `maxChain=100`, `needCorrectTool=true`, one `Ores` group using `#c:ores` and `#minecraft:pickaxes`; therefore `vein_mining` is present and `tree_felling` is absent.
+- API JSON uses `lower_snake_case` field names to match the v1 design contract, including `bridge_version`, `server_software`, and `generated_at`.
 
 ---
 
@@ -287,6 +288,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.neko0115.moxuebridge.model.BridgeSnapshot;
 import io.github.neko0115.moxuebridge.model.BridgeStatus;
+import io.github.neko0115.moxuebridge.model.PluginInfo;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -294,7 +296,8 @@ import org.junit.jupiter.api.Test;
 class CapabilityRegistryTest {
     @Test
     void snapshotCopiesInputListsAndSwapsAtomically() {
-        var plugins = new ArrayList<io.github.neko0115.moxuebridge.model.PluginInfo>();
+        var plugins = new ArrayList<PluginInfo>();
+        plugins.add(new PluginInfo("VeinMiner", "2.11.2", true, true, List.of()));
         var snapshot = new BridgeSnapshot(
                 "2026-09-17T08:00:00Z",
                 new BridgeStatus("MoxueBridge", "0.1.0", "1.21.1", "Paper", true),
@@ -304,7 +307,7 @@ class CapabilityRegistryTest {
         var registry = new CapabilityRegistry(snapshot);
         plugins.clear();
 
-        assertEquals(0, registry.snapshot().plugins().size());
+        assertEquals(1, registry.snapshot().plugins().size());
         assertThrows(UnsupportedOperationException.class,
                 () -> registry.snapshot().plugins().add(null));
     }
@@ -528,7 +531,7 @@ git commit -m "feat: add bearer token security primitives"
 
 **Interfaces:**
 - Produces: `PluginIntegration#supports(RuntimePluginDescriptor): boolean`
-- Produces: `PluginIntegration#discoverCapabilities(RuntimePluginDescriptor): List<Capability>`
+- Produces: `PluginIntegration#discoverCapabilities(RuntimePluginDescriptor): List<Capability>` throwing `IntegrationException`
 - `VeinMinerIntegration` reads only VeinMiner's own data files; it never mutates them.
 
 - [ ] **Step 1: Add the current observed VeinMiner fixtures**
@@ -600,7 +603,7 @@ assertEquals(List.of("vein_mining"), ids(oresOnlyCapabilities));
 assertEquals(List.of("tree_felling", "vein_mining"), sortedIds(oresAndLogsCapabilities));
 ```
 
-Also test `supports(...)` case-insensitively for `VeinMiner` / `Veinminer` and test that malformed JSON throws `IntegrationException` instead of silently inventing capabilities.
+Also test `supports(...)` case-insensitively for `VeinMiner` / `Veinminer`, disabled plugins return no capabilities, and malformed JSON throws `IntegrationException` instead of silently inventing capabilities.
 
 - [ ] **Step 3: Run RED**
 
@@ -617,22 +620,25 @@ Expected: compile failure because integration classes do not exist.
 ```java
 public interface PluginIntegration {
     boolean supports(RuntimePluginDescriptor plugin);
-    java.util.List<Capability> discoverCapabilities(RuntimePluginDescriptor plugin);
+    java.util.List<Capability> discoverCapabilities(RuntimePluginDescriptor plugin)
+            throws IntegrationException;
 }
 ```
+
+`IntegrationException` extends `Exception` and retains the original cause.
 
 `VeinMinerIntegration` rules:
 
 - Return no capabilities when `plugin.enabled()` is false.
 - Parse `settings.json` and `groups.json` with Gson.
-- Detect ore capability when a group contains a block token containing `ores` and a tool token containing `pickaxes`; group name `Ores` is only a fallback signal.
-- Detect tree-felling capability when a group contains a log/stem token (`logs`, `_log`, `stem`) and an axe token (`axes`); group name `Logs` is only a fallback signal.
+- Detect ore capability only when tools contain a `pickaxes` token and blocks contain an `ores` token; group name `Ores` may substitute for the block token only when the pickaxe tool condition is still met.
+- Detect tree-felling only when tools contain an `axes` token and blocks contain `logs`, `_log`, or `stem`; group name `Logs` may substitute for the block token only when the axe tool condition is still met.
 - Build `usage.human` from `mustSneak` and `needCorrectTool` rather than hard-coding Shift unconditionally.
 - Put `max_chain`, `correct_tool_required`, `search_radius`, and `decrease_durability` in capability constraints.
 - Use provenance `integration`.
 - Convert I/O and JSON parse failures into `IntegrationException` containing the source filename but never file contents.
 
-Expected `vein_mining` capability:
+Expected `vein_mining` capability for the current fixture:
 
 ```java
 new Capability(
@@ -688,7 +694,7 @@ Cover these cases:
 3. Unknown enabled plugin with command metadata => plugin is reported with command metadata but no invented deep capability.
 4. Integration throws `IntegrationException` => snapshot still builds and contains plugin metadata, but no capability from the failed integration.
 
-Use a deterministic clock/string supplier so `generatedAt` can be asserted exactly.
+Use deterministic `Supplier<String>` timestamp and `Supplier<BridgeStatus>` inputs so output can be asserted exactly.
 
 - [ ] **Step 2: Run RED**
 
@@ -708,7 +714,7 @@ public interface PluginCatalog {
 }
 ```
 
-`RegistryBuilder` constructor dependencies:
+`RegistryBuilder` constructor:
 
 ```java
 public RegistryBuilder(
@@ -739,7 +745,7 @@ For each plugin:
 - `version`: `plugin.getPluginMeta().getVersion()`
 - `enabled`: `plugin.isEnabled()`
 - `dataFolder`: `plugin.getDataFolder().toPath()`
-- commands: parse trusted declared plugin commands using `PluginCommandYamlParser.parse(plugin)` and map command name, description, usage, permission, aliases into `CommandInfo`.
+- commands: parse trusted plugin-declared commands with `PluginCommandYamlParser.parse(plugin)` and map command name, description, usage, permission, aliases into `CommandInfo`.
 
 If command parsing fails for one plugin, log the plugin name and continue with an empty command list; do not fail the whole snapshot.
 
@@ -769,7 +775,7 @@ git commit -m "feat: build runtime capability snapshots"
 **Interfaces:**
 - Produces: `BridgeHttpServer#start(): void`
 - Produces: `BridgeHttpServer#stop(): void`
-- Produces test-only/public read method `boundPort(): int`
+- Produces: `BridgeHttpServer#boundPort(): int`
 - Consumes: `CapabilityRegistry`, `BearerTokenValidator`, bind address, port, logger.
 
 - [ ] **Step 1: Write failing end-to-end HTTP tests on loopback port 0**
@@ -779,7 +785,7 @@ Use JDK `HttpClient` against a real `HttpServer` bound to `127.0.0.1:0`.
 Seed registry with one plugin and one capability. Test:
 
 - GET `/api/v1/status` without token => `401`.
-- GET `/api/v1/status` with `Bearer test-token` => `200`, JSON includes `bridge`, `bridgeVersion`, `minecraft`, `serverSoftware`, `online`.
+- GET `/api/v1/status` with `Bearer test-token` => `200`, JSON contains `bridge`, `bridge_version`, `minecraft`, `server_software`, `online`.
 - GET `/api/v1/plugins` => `200`, contains seeded plugin.
 - GET `/api/v1/capabilities` => `200`, contains seeded capability.
 - POST `/api/v1/status` => `405`.
@@ -802,11 +808,19 @@ Use:
 com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(bindAddress, port), 0)
 ```
 
+Use exactly one Gson instance:
+
+```java
+new com.google.gson.GsonBuilder()
+    .setFieldNamingPolicy(com.google.gson.FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+    .disableHtmlEscaping()
+    .create();
+```
+
 Rules:
 
 - Authenticate before routing `/api/v1/*`.
 - Allow only `GET`.
-- Serialize with one `new GsonBuilder().disableHtmlEscaping().create()` instance.
 - `/status` serializes `registry.snapshot().status()`.
 - `/plugins` serializes `registry.snapshot().plugins()`.
 - `/capabilities` serializes `registry.snapshot().capabilities()`.
@@ -842,18 +856,35 @@ git commit -m "feat: add authenticated capability API"
 
 **Interfaces:**
 - Produces: `BridgeConfiguration(String bindAddress, int port, String token)`
+- Produces: `BridgeConfiguration.resolve(String, int, String, Supplier<String>)`
 - Lifecycle refresh callback rebuilds then atomically replaces the registry snapshot.
 
-- [ ] **Step 1: Write failing pure config/token resolution tests**
+- [ ] **Step 1: Write failing pure configuration tests**
 
-Refactor runtime config resolution so a pure helper can be tested from a map-like input. Cover:
+Target static API:
 
-- blank token => generate and return a new token;
-- existing nonblank token => preserve it unchanged;
-- invalid port `<1` or `>65535` => reject;
-- blank bind address => reject.
+```java
+BridgeConfiguration.resolve(bindAddress, port, token, tokenSupplier)
+```
 
-The Paper adapter will save a generated token back to `config.yml`; the test helper does not need Bukkit.
+Tests:
+
+```java
+assertEquals(
+    "generated-token",
+    BridgeConfiguration.resolve("0.0.0.0", 8766, "", () -> "generated-token").token());
+
+assertEquals(
+    "existing-token",
+    BridgeConfiguration.resolve("0.0.0.0", 8766, "existing-token", () -> "unused").token());
+
+assertThrows(IllegalArgumentException.class,
+    () -> BridgeConfiguration.resolve("", 8766, "x", () -> "unused"));
+assertThrows(IllegalArgumentException.class,
+    () -> BridgeConfiguration.resolve("0.0.0.0", 0, "x", () -> "unused"));
+assertThrows(IllegalArgumentException.class,
+    () -> BridgeConfiguration.resolve("0.0.0.0", 65536, "x", () -> "unused"));
+```
 
 - [ ] **Step 2: Run RED**
 
@@ -861,16 +892,19 @@ The Paper adapter will save a generated token back to `config.yml`; the test hel
 .\gradlew.bat test --tests "*BridgeConfigurationTest"
 ```
 
-Expected: compile failure because configuration classes do not exist.
+Expected: compile failure because `BridgeConfiguration` does not exist.
 
 - [ ] **Step 3: Implement configuration resolution and runtime persistence**
 
-`BridgeConfiguration` is an immutable record. In `MoxueBridgePlugin#onEnable()`:
+`BridgeConfiguration.resolve(...)` trims and validates bind address, validates port `1..65535`, preserves a nonblank token, and obtains a generated token from the supplier only when the configured token is blank.
+
+In `MoxueBridgePlugin#onEnable()`:
 
 1. `saveDefaultConfig()`.
 2. Read `http.bind`, `http.port`, `security.token`.
-3. If token is blank, generate it with `TokenGenerator`, write only to this plugin's runtime `config.yml`, call `saveConfig()`, and log: `Generated API token; retrieve it from plugins/MoxueBridge/config.yml`.
-4. Never log the token value.
+3. Resolve through `BridgeConfiguration.resolve(..., tokenGenerator::generate)`.
+4. If the original token was blank, write only the generated token to this plugin's runtime `config.yml`, call `saveConfig()`, and log: `Generated API token; retrieve it from plugins/MoxueBridge/config.yml`.
+5. Never log the token value.
 
 - [ ] **Step 4: Implement registry refresh wiring**
 
@@ -1017,6 +1051,7 @@ git commit -m "docs: add CI and operator guide"
 **Files:**
 - Deploy artifact only: `D:\MC_AI_Server\plugins\MoxueBridge.jar`
 - Runtime generated: `D:\MC_AI_Server\plugins\MoxueBridge\config.yml`
+- Runtime VeinMiner test config: `D:\MC_AI_Server\plugins\Veinminer\groups.json`
 - No source files are edited in this task unless a smoke test exposes a defect.
 
 **Interfaces:**
@@ -1077,7 +1112,7 @@ Invoke-RestMethod `
   -Headers @{ Authorization = "Bearer $token" }
 ```
 
-Expected: bridge `MoxueBridge`, version `0.1.0`, Minecraft `1.21.1`, server software `Paper`, `online=true`.
+Expected JSON fields: `bridge=MoxueBridge`, `bridge_version=0.1.0`, `minecraft=1.21.1`, `server_software=Paper`, `online=true`.
 
 - [ ] **Step 5: Verify Ores-only baseline capability**
 
@@ -1124,21 +1159,83 @@ New-NetFirewallRule `
   -RemoteAddress LocalSubnet
 ```
 
-From the DC_BOT desktop, first test TCP reachability to the server laptop's current LAN IPv4:
+The current known server-laptop LAN IPv4 is `192.168.50.159`. Confirm it on the server before testing:
 
 ```powershell
-Test-NetConnection <server-laptop-LAN-IPv4> -Port 8766
+Get-NetIPAddress -AddressFamily IPv4 |
+Where-Object {
+    $_.IPAddress -notlike "127.*" -and
+    $_.IPAddress -notlike "169.254.*"
+} |
+Select-Object InterfaceAlias,IPAddress
 ```
 
-Then issue the authenticated status request using the same token stored locally on the desktop for this smoke test.
+From the DC_BOT desktop, if the confirmed address is still `192.168.50.159`:
+
+```powershell
+Test-NetConnection 192.168.50.159 -Port 8766
+```
+
+If the confirmation command shows a different current LAN address, use that confirmed address instead. Then issue the authenticated status request from the desktop using the same token stored only in that local PowerShell session.
 
 Expected: TCP succeeds and authenticated status returns 200; unauthenticated request returns 401.
 
 - [ ] **Step 8: Validate tree-felling discovery as the second real capability case**
 
-After the Ores-only baseline passes, add a valid Logs group to VeinMiner using `#minecraft:logs` and `#minecraft:axes`, then perform a clean Paper restart.
+Stop Paper cleanly. Back up the existing VeinMiner groups file:
 
-Repeat `/api/v1/capabilities`.
+```powershell
+Copy-Item `
+  "D:\MC_AI_Server\plugins\Veinminer\groups.json" `
+  "D:\MC_AI_Server\plugins\Veinminer\groups.before-tree-felling.json" `
+  -Force
+```
+
+For the current baseline server, replace `groups.json` with exactly these two groups:
+
+```json
+{
+  "value": [
+    {
+      "name": "Ores",
+      "blocks": ["#c:ores"],
+      "tools": ["#minecraft:pickaxes"],
+      "override": {
+        "cooldown": null,
+        "mustSneak": null,
+        "delay": null,
+        "maxChain": null,
+        "needCorrectTool": null,
+        "searchRadius": null,
+        "permissionRestricted": null,
+        "decreaseDurability": null,
+        "hungerPerBlock": null,
+        "miningSpeedModifier": null
+      }
+    },
+    {
+      "name": "Logs",
+      "blocks": ["#minecraft:logs"],
+      "tools": ["#minecraft:axes"],
+      "override": {
+        "cooldown": null,
+        "mustSneak": null,
+        "delay": null,
+        "maxChain": null,
+        "needCorrectTool": null,
+        "searchRadius": null,
+        "permissionRestricted": null,
+        "decreaseDurability": null,
+        "hungerPerBlock": null,
+        "miningSpeedModifier": null
+      }
+    }
+  ],
+  "Count": 2
+}
+```
+
+Restart Paper cleanly and repeat `/api/v1/capabilities`.
 
 Expected without changing MoxueBridge API or any DC_BOT code:
 
@@ -1181,7 +1278,7 @@ Expected: all tests PASS, working tree clean, all implementation commits pushed.
 
 ### Type consistency
 
-The stable boundary used by later tasks is `CapabilityRegistry -> BridgeSnapshot -> {status, plugins, capabilities}`. Integration code receives `RuntimePluginDescriptor` rather than raw Bukkit `Plugin`, keeping VeinMiner parsing testable without a running Paper server. HTTP code depends only on `CapabilityRegistry`, so HTTP worker threads do not touch Bukkit state.
+The stable boundary used by later tasks is `CapabilityRegistry -> BridgeSnapshot -> {status, plugins, capabilities}`. Integration code receives `RuntimePluginDescriptor` rather than raw Bukkit `Plugin`, keeping VeinMiner parsing testable without a running Paper server. HTTP code depends only on `CapabilityRegistry`, so HTTP worker threads do not touch Bukkit state. Gson's `LOWER_CASE_WITH_UNDERSCORES` policy converts Java record members such as `bridgeVersion`, `serverSoftware`, and `generatedAt` into the exact v1 JSON names defined by the spec.
 
 ### Security consistency
 
