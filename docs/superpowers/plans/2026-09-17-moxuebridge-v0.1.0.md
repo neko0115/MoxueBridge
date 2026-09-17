@@ -30,59 +30,59 @@
 
 ```text
 MoxueBridge/
-├─ .github/
-│  └─ workflows/
-│     └─ ci.yml
-├─ .gitignore
-├─ README.md
-├─ build.gradle.kts
-├─ settings.gradle.kts
-├─ gradle.properties
-├─ gradlew
-├─ gradlew.bat
-├─ gradle/wrapper/...
-├─ src/
-│  ├─ main/
-│  │  ├─ java/io/github/neko0115/moxuebridge/
-│  │  │  ├─ MoxueBridgePlugin.java
-│  │  │  ├─ api/
-│  │  │  │  └─ BridgeHttpServer.java
-│  │  │  ├─ config/
-│  │  │  │  ├─ BridgeConfiguration.java
-│  │  │  │  └─ TokenGenerator.java
-│  │  │  ├─ discovery/
-│  │  │  │  ├─ BukkitPluginCatalog.java
-│  │  │  │  ├─ PluginCatalog.java
-│  │  │  │  └─ RegistryBuilder.java
-│  │  │  ├─ integration/
-│  │  │  │  ├─ IntegrationException.java
-│  │  │  │  ├─ PluginIntegration.java
-│  │  │  │  └─ VeinMinerIntegration.java
-│  │  │  ├─ lifecycle/
-│  │  │  │  └─ PluginLifecycleListener.java
-│  │  │  ├─ model/
-│  │  │  │  ├─ BridgeSnapshot.java
-│  │  │  │  ├─ BridgeStatus.java
-│  │  │  │  ├─ Capability.java
-│  │  │  │  ├─ CapabilitySource.java
-│  │  │  │  ├─ CapabilityUsage.java
-│  │  │  │  ├─ CommandInfo.java
-│  │  │  │  ├─ PluginInfo.java
-│  │  │  │  └─ RuntimePluginDescriptor.java
-│  │  │  ├─ registry/
-│  │  │  │  └─ CapabilityRegistry.java
-│  │  │  └─ security/
-│  │  │     └─ BearerTokenValidator.java
-│  │  └─ resources/
-│  │     ├─ config.yml
-│  │     └─ plugin.yml
-│  └─ test/
-│     ├─ java/io/github/neko0115/moxuebridge/...
-│     └─ resources/veinminer/
-│        ├─ ores-only/settings.json
-│        ├─ ores-only/groups.json
-│        └─ ores-and-logs/groups.json
-└─ docs/superpowers/...
+?? .github/
+?? ?? workflows/
+??    ?? ci.yml
+?? .gitignore
+?? README.md
+?? build.gradle.kts
+?? settings.gradle.kts
+?? gradle.properties
+?? gradlew
+?? gradlew.bat
+?? gradle/wrapper/...
+?? src/
+?? ?? main/
+?? ?? ?? java/io/github/neko0115/moxuebridge/
+?? ?? ?? ?? MoxueBridgePlugin.java
+?? ?? ?? ?? api/
+?? ?? ?? ?? ?? BridgeHttpServer.java
+?? ?? ?? ?? config/
+?? ?? ?? ?? ?? BridgeConfiguration.java
+?? ?? ?? ?? ?? TokenGenerator.java
+?? ?? ?? ?? discovery/
+?? ?? ?? ?? ?? BukkitPluginCatalog.java
+?? ?? ?? ?? ?? PluginCatalog.java
+?? ?? ?? ?? ?? RegistryBuilder.java
+?? ?? ?? ?? integration/
+?? ?? ?? ?? ?? IntegrationException.java
+?? ?? ?? ?? ?? PluginIntegration.java
+?? ?? ?? ?? ?? VeinMinerIntegration.java
+?? ?? ?? ?? lifecycle/
+?? ?? ?? ?? ?? PluginLifecycleListener.java
+?? ?? ?? ?? model/
+?? ?? ?? ?? ?? BridgeSnapshot.java
+?? ?? ?? ?? ?? BridgeStatus.java
+?? ?? ?? ?? ?? Capability.java
+?? ?? ?? ?? ?? CapabilitySource.java
+?? ?? ?? ?? ?? CapabilityUsage.java
+?? ?? ?? ?? ?? CommandInfo.java
+?? ?? ?? ?? ?? PluginInfo.java
+?? ?? ?? ?? ?? RuntimePluginDescriptor.java
+?? ?? ?? ?? registry/
+?? ?? ?? ?? ?? CapabilityRegistry.java
+?? ?? ?? ?? security/
+?? ?? ??    ?? BearerTokenValidator.java
+?? ?? ?? resources/
+?? ??    ?? config.yml
+?? ??    ?? plugin.yml
+?? ?? test/
+??    ?? java/io/github/neko0115/moxuebridge/...
+??    ?? resources/veinminer/
+??       ?? ores-only/settings.json
+??       ?? ores-only/groups.json
+??       ?? ores-and-logs/groups.json
+?? docs/superpowers/...
 ```
 
 ---
@@ -643,11 +643,11 @@ Expected `vein_mining` capability for the current fixture:
 ```java
 new Capability(
     "vein_mining",
-    "連鎖挖礦",
-    "一次挖掘相連的礦物方塊",
+    "????丹",
+    "銝甈⊥?????蝷衣?孵?",
     true,
     new CapabilitySource("VeinMiner", "2.11.2", "integration"),
-    new CapabilityUsage("sneak_and_break", "蹲下並使用正確的十字鎬挖掘相連礦物"),
+    new CapabilityUsage("sneak_and_break", "頩脖?銝虫蝙?冽迤蝣箇????祆????丹??),
     Map.of(
         "max_chain", 100,
         "correct_tool_required", true,
@@ -1182,60 +1182,40 @@ Expected: TCP succeeds and authenticated status returns 200; unauthenticated req
 
 - [ ] **Step 8: Validate tree-felling discovery as the second real capability case**
 
-Stop Paper cleanly. Back up the existing VeinMiner groups file:
+Use VeinMiner itself to create the Logs group instead of manually serializing `groups.json`.
 
-```powershell
-Copy-Item `
-  "D:\MC_AI_Server\plugins\Veinminer\groups.json" `
-  "D:\MC_AI_Server\plugins\Veinminer\groups.before-tree-felling.json" `
-  -Force
+In the Paper console:
+
+```text
+veinminer groups create Logs
+veinminer groups edit Logs add-block #minecraft:logs
+veinminer groups edit Logs add-tool #minecraft:axes
 ```
 
-For the current baseline server, replace `groups.json` with exactly these two groups:
+VeinMiner 2.11.2 stores `groups.json` as a top-level JSON array, for example:
 
 ```json
-{
-  "value": [
-    {
-      "name": "Ores",
-      "blocks": ["#c:ores"],
-      "tools": ["#minecraft:pickaxes"],
-      "override": {
-        "cooldown": null,
-        "mustSneak": null,
-        "delay": null,
-        "maxChain": null,
-        "needCorrectTool": null,
-        "searchRadius": null,
-        "permissionRestricted": null,
-        "decreaseDurability": null,
-        "hungerPerBlock": null,
-        "miningSpeedModifier": null
-      }
-    },
-    {
-      "name": "Logs",
-      "blocks": ["#minecraft:logs"],
-      "tools": ["#minecraft:axes"],
-      "override": {
-        "cooldown": null,
-        "mustSneak": null,
-        "delay": null,
-        "maxChain": null,
-        "needCorrectTool": null,
-        "searchRadius": null,
-        "permissionRestricted": null,
-        "decreaseDurability": null,
-        "hungerPerBlock": null,
-        "miningSpeedModifier": null
-      }
-    }
-  ],
-  "Count": 2
-}
+[
+  {
+    "name": "Ores",
+    "blocks": ["#c:ores"],
+    "tools": ["#minecraft:pickaxes"],
+    "override": {}
+  },
+  {
+    "name": "Logs",
+    "blocks": ["#minecraft:logs"],
+    "tools": ["#minecraft:axes"],
+    "override": {}
+  }
+]
 ```
 
-Restart Paper cleanly and repeat `/api/v1/capabilities`.
+Do not wrap the array in `{ "value": [...] }`.
+
+Stop and restart Paper cleanly after changing the VeinMiner groups. A group configuration edit does not itself emit a plugin enable/disable lifecycle event, so the clean restart guarantees MoxueBridge rebuilds the initial capability snapshot from the updated configuration.
+
+Repeat `/api/v1/capabilities`.
 
 Expected without changing MoxueBridge API or any DC_BOT code:
 

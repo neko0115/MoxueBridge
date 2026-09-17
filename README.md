@@ -27,7 +27,7 @@ MoxueBridge currently provides:
 On the server laptop:
 
 ```powershell
-cd D:\MoxueBridge\.worktrees\feature-v0.1.0
+cd D:\MoxueBridge
 .\gradlew.bat clean test build
 ```
 
