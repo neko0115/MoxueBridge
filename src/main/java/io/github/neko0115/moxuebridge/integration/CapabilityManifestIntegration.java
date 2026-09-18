@@ -234,11 +234,15 @@ public final class CapabilityManifestIntegration
                 long integral =
                         primitive.getAsLong();
 
-                result.put(
-                        key,
-                        number == integral
-                                ? integral
-                                : number);
+                if (number == integral) {
+                    result.put(
+                            key,
+                            integral);
+                } else {
+                    result.put(
+                            key,
+                            number);
+                }
 
             } else if (primitive.isString()) {
                 String text =
