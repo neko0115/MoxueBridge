@@ -78,6 +78,14 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 false,
                 capability.constraints().get("same_block_only"));
+
+        assertEquals(
+                false,
+                capability.constraints().get("merge_item_drops"));
+
+        assertEquals(
+                "pickaxe",
+                capability.constraints().get("tool_kind"));
     }
 
     @Test
@@ -115,6 +123,7 @@ class VeinMinerIntegrationTest {
                   "mustSneak": true,
                   "maxChain": 8,
                   "needCorrectTool": true,
+                  "mergeItemDrops": true,
                   "separateGroupMining": true
                 }
                 """,
@@ -171,6 +180,12 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 true,
                 veinMining.constraints().get("same_block_only"));
+        assertEquals(
+                true,
+                veinMining.constraints().get("merge_item_drops"));
+        assertEquals(
+                "pickaxe",
+                veinMining.constraints().get("tool_kind"));
 
         var treeFelling = capabilities.stream()
                 .filter(capability ->
@@ -193,6 +208,12 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 false,
                 treeFelling.constraints().get("same_block_only"));
+        assertEquals(
+                true,
+                treeFelling.constraints().get("merge_item_drops"));
+        assertEquals(
+                "axe",
+                treeFelling.constraints().get("tool_kind"));
     }
 
     @Test
