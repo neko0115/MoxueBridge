@@ -177,6 +177,7 @@ max_chain
 correct_tool_required
 must_sneak
 same_block_only
+exact_block
 merge_item_drops
 tool_kind
 ```
@@ -186,6 +187,12 @@ When it is `false`, blocks inside the same VeinMiner group may chain together;
 when it is `true`, only the exact mined block type chains. Missing
 `separateGroupMining` is treated as `false`, matching VeinMiner's default and
 failing closed for MC_AI_Player multi-block automation.
+
+When a VeinMiner group contains exactly one explicit block selector (for
+example `minecraft:iron_ore`, not a tag such as `#c:ores`), MoxueBridge also
+publishes `exact_block`. This lets consumers prove that the advertised
+accelerator applies to the concrete block being mutated. Broad/tag groups do
+not receive an invented exact scope even when `separateGroupMining=true`.
 
 `tool_kind` exposes the stable semantic tool family required by the integrated
 group (`pickaxe` for Ores and `axe` for Logs). `merge_item_drops` reflects
