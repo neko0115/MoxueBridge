@@ -86,6 +86,10 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 "pickaxe",
                 capability.constraints().get("tool_kind"));
+
+        assertFalse(
+                capability.constraints()
+                        .containsKey("exact_block"));
     }
 
     @Test
@@ -186,6 +190,9 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 "pickaxe",
                 veinMining.constraints().get("tool_kind"));
+        assertFalse(
+                veinMining.constraints()
+                        .containsKey("exact_block"));
 
         var treeFelling = capabilities.stream()
                 .filter(capability ->
@@ -270,6 +277,62 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 "axe",
                 capability.constraints().get("tool_kind"));
+        assertEquals(
+                "minecraft:oak_log",
+                capability.constraints().get("exact_block"));
+    }
+
+    @Test
+    void singleExplicitOreGroupPublishesExactBlockScope()
+            throws Exception {
+
+        Files.writeString(
+                tempDir.resolve("settings.json"),
+                """
+                {
+                  "mustSneak": true,
+                  "maxChain": 100,
+                  "needCorrectTool": true,
+                  "mergeItemDrops": false
+                }
+                """,
+                StandardCharsets.UTF_8);
+
+        Files.writeString(
+                tempDir.resolve("groups.json"),
+                """
+                [
+                  {
+                    "name": "Ores",
+                    "blocks": ["minecraft:iron_ore"],
+                    "tools": ["#minecraft:pickaxes"],
+                    "override": {
+                      "maxChain": 4
+                    }
+                  }
+                ]
+                """,
+                StandardCharsets.UTF_8);
+
+        var integration = new VeinMinerIntegration();
+
+        var capability = integration
+                .discoverCapabilities(
+                        descriptor("VeinMiner", true))
+                .get(0);
+
+        assertEquals(
+                "vein_mining",
+                capability.id());
+        assertEquals(
+                true,
+                capability.constraints().get("same_block_only"));
+        assertEquals(
+                4,
+                capability.constraints().get("max_chain"));
+        assertEquals(
+                "minecraft:iron_ore",
+                capability.constraints().get("exact_block"));
     }
 
     @Test
