@@ -64,6 +64,11 @@ public final class VeinMinerIntegration
                             && settings.get("separateGroupMining")
                                     .getAsBoolean();
 
+            boolean mergeItemDrops =
+                    settings.has("mergeItemDrops")
+                            && settings.get("mergeItemDrops")
+                                    .getAsBoolean();
+
             List<Capability> capabilities =
                     new ArrayList<>();
 
@@ -111,7 +116,8 @@ public final class VeinMinerIntegration
                                     effectiveMustSneak,
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
-                                    effectiveSeparateGroupMining));
+                                    effectiveSeparateGroupMining,
+                                    mergeItemDrops));
                 }
 
                 if ("Logs".equalsIgnoreCase(name)) {
@@ -121,7 +127,8 @@ public final class VeinMinerIntegration
                                     effectiveMustSneak,
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
-                                    effectiveSeparateGroupMining));
+                                    effectiveSeparateGroupMining,
+                                    mergeItemDrops));
                 }
             }
 
@@ -139,7 +146,8 @@ public final class VeinMinerIntegration
             boolean mustSneak,
             int maxChain,
             boolean needCorrectTool,
-            boolean sameBlockOnly) {
+            boolean sameBlockOnly,
+            boolean mergeItemDrops) {
 
         String trigger =
                 mustSneak
@@ -164,7 +172,9 @@ public final class VeinMinerIntegration
                         maxChain,
                         needCorrectTool,
                         mustSneak,
-                        sameBlockOnly));
+                        sameBlockOnly,
+                        mergeItemDrops,
+                        "pickaxe"));
     }
 
     private Capability treeFellingCapability(
@@ -172,7 +182,8 @@ public final class VeinMinerIntegration
             boolean mustSneak,
             int maxChain,
             boolean needCorrectTool,
-            boolean sameBlockOnly) {
+            boolean sameBlockOnly,
+            boolean mergeItemDrops) {
 
         String trigger =
                 mustSneak
@@ -197,7 +208,9 @@ public final class VeinMinerIntegration
                         maxChain,
                         needCorrectTool,
                         mustSneak,
-                        sameBlockOnly));
+                        sameBlockOnly,
+                        mergeItemDrops,
+                        "axe"));
     }
 
     private CapabilitySource source(
@@ -213,13 +226,17 @@ public final class VeinMinerIntegration
             int maxChain,
             boolean needCorrectTool,
             boolean mustSneak,
-            boolean sameBlockOnly) {
+            boolean sameBlockOnly,
+            boolean mergeItemDrops,
+            String toolKind) {
 
         return Map.<String, Object>of(
                 "max_chain", maxChain,
                 "correct_tool_required", needCorrectTool,
                 "must_sneak", mustSneak,
-                "same_block_only", sameBlockOnly);
+                "same_block_only", sameBlockOnly,
+                "merge_item_drops", mergeItemDrops,
+                "tool_kind", toolKind);
     }
 
     private boolean booleanOverride(
