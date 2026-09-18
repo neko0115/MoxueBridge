@@ -5,6 +5,7 @@ import io.github.neko0115.moxuebridge.config.BridgeConfiguration;
 import io.github.neko0115.moxuebridge.config.TokenGenerator;
 import io.github.neko0115.moxuebridge.discovery.BukkitPluginCatalog;
 import io.github.neko0115.moxuebridge.discovery.RegistryBuilder;
+import io.github.neko0115.moxuebridge.integration.CapabilityManifestIntegration;
 import io.github.neko0115.moxuebridge.integration.PluginIntegration;
 import io.github.neko0115.moxuebridge.integration.ResourceManifestIntegration;
 import io.github.neko0115.moxuebridge.integration.VeinMinerIntegration;
@@ -79,6 +80,7 @@ public final class MoxueBridgePlugin extends JavaPlugin {
             List<PluginIntegration> integrations =
                     List.of(
                             new VeinMinerIntegration(),
+                            new CapabilityManifestIntegration(),
                             new ResourceManifestIntegration());
 
             var registryBuilder =
