@@ -216,6 +216,62 @@ class VeinMinerIntegrationTest {
                 treeFelling.constraints().get("tool_kind"));
     }
 
+
+
+    @Test
+    void singleExplicitBlockGroupIsSameBlockOnlyWithoutSeparateGroupMining()
+            throws Exception {
+
+        Files.writeString(
+                tempDir.resolve("settings.json"),
+                """
+                {
+                  "mustSneak": true,
+                  "maxChain": 100,
+                  "needCorrectTool": true,
+                  "mergeItemDrops": false
+                }
+                """,
+                StandardCharsets.UTF_8);
+
+        Files.writeString(
+                tempDir.resolve("groups.json"),
+                """
+                [
+                  {
+                    "name": "Logs",
+                    "blocks": ["minecraft:oak_log"],
+                    "tools": ["#minecraft:axes"],
+                    "override": {
+                      "maxChain": 4
+                    }
+                  }
+                ]
+                """,
+                StandardCharsets.UTF_8);
+
+        var integration = new VeinMinerIntegration();
+
+        var capabilities = integration.discoverCapabilities(
+                descriptor("VeinMiner", true));
+
+        assertEquals(
+                List.of("tree_felling"),
+                sortedIds(capabilities));
+
+        var capability = capabilities.get(0);
+
+        assertEquals(
+                true,
+                capability.constraints().get("same_block_only"));
+        assertEquals(
+                4,
+                capability.constraints().get("max_chain"));
+        assertEquals(
+                "axe",
+                capability.constraints().get("tool_kind"));
+    }
+
     @Test
     void disabledPluginProducesNoCapabilities()
             throws Exception {
