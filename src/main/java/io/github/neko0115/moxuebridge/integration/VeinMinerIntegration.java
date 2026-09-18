@@ -109,6 +109,10 @@ public final class VeinMinerIntegration
                                 "separateGroupMining",
                                 separateGroupMining);
 
+                boolean effectiveSameBlockOnly =
+                        effectiveSeparateGroupMining
+                                || hasSingleExplicitBlock(group);
+
                 if ("Ores".equalsIgnoreCase(name)) {
                     capabilities.add(
                             veinMiningCapability(
@@ -116,7 +120,7 @@ public final class VeinMinerIntegration
                                     effectiveMustSneak,
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
-                                    effectiveSeparateGroupMining,
+                                    effectiveSameBlockOnly,
                                     mergeItemDrops));
                 }
 
@@ -127,7 +131,7 @@ public final class VeinMinerIntegration
                                     effectiveMustSneak,
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
-                                    effectiveSeparateGroupMining,
+                                    effectiveSameBlockOnly,
                                     mergeItemDrops));
                 }
             }
@@ -237,6 +241,36 @@ public final class VeinMinerIntegration
                 "same_block_only", sameBlockOnly,
                 "merge_item_drops", mergeItemDrops,
                 "tool_kind", toolKind);
+    }
+
+    private boolean hasSingleExplicitBlock(
+            JsonObject group) {
+
+        if (!group.has("blocks")
+                || !group.get("blocks").isJsonArray()) {
+            return false;
+        }
+
+        JsonArray blocks =
+                group.getAsJsonArray("blocks");
+
+        if (blocks.size() != 1) {
+            return false;
+        }
+
+        JsonElement only =
+                blocks.get(0);
+
+        if (!only.isJsonPrimitive()
+                || !only.getAsJsonPrimitive().isString()) {
+            return false;
+        }
+
+        String selector =
+                only.getAsString().trim();
+
+        return !selector.isEmpty()
+                && !selector.startsWith("#");
     }
 
     private boolean booleanOverride(
