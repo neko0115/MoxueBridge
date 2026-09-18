@@ -59,6 +59,11 @@ public final class VeinMinerIntegration
                     settings.get("needCorrectTool")
                             .getAsBoolean();
 
+            boolean separateGroupMining =
+                    settings.has("separateGroupMining")
+                            && settings.get("separateGroupMining")
+                                    .getAsBoolean();
+
             List<Capability> capabilities =
                     new ArrayList<>();
 
@@ -69,22 +74,54 @@ public final class VeinMinerIntegration
                 String name =
                         group.get("name").getAsString();
 
+                JsonObject override =
+                        group.has("override")
+                                && group.get("override").isJsonObject()
+                                ? group.getAsJsonObject("override")
+                                : new JsonObject();
+
+                boolean effectiveMustSneak =
+                        booleanOverride(
+                                override,
+                                "mustSneak",
+                                mustSneak);
+
+                int effectiveMaxChain =
+                        intOverride(
+                                override,
+                                "maxChain",
+                                maxChain);
+
+                boolean effectiveNeedCorrectTool =
+                        booleanOverride(
+                                override,
+                                "needCorrectTool",
+                                needCorrectTool);
+
+                boolean effectiveSeparateGroupMining =
+                        booleanOverride(
+                                override,
+                                "separateGroupMining",
+                                separateGroupMining);
+
                 if ("Ores".equalsIgnoreCase(name)) {
                     capabilities.add(
                             veinMiningCapability(
                                     plugin,
-                                    mustSneak,
-                                    maxChain,
-                                    needCorrectTool));
+                                    effectiveMustSneak,
+                                    effectiveMaxChain,
+                                    effectiveNeedCorrectTool,
+                                    effectiveSeparateGroupMining));
                 }
 
                 if ("Logs".equalsIgnoreCase(name)) {
                     capabilities.add(
                             treeFellingCapability(
                                     plugin,
-                                    mustSneak,
-                                    maxChain,
-                                    needCorrectTool));
+                                    effectiveMustSneak,
+                                    effectiveMaxChain,
+                                    effectiveNeedCorrectTool,
+                                    effectiveSeparateGroupMining));
                 }
             }
 
@@ -101,7 +138,8 @@ public final class VeinMinerIntegration
             RuntimePluginDescriptor plugin,
             boolean mustSneak,
             int maxChain,
-            boolean needCorrectTool) {
+            boolean needCorrectTool,
+            boolean sameBlockOnly) {
 
         String trigger =
                 mustSneak
@@ -125,14 +163,16 @@ public final class VeinMinerIntegration
                 commonConstraints(
                         maxChain,
                         needCorrectTool,
-                        mustSneak));
+                        mustSneak,
+                        sameBlockOnly));
     }
 
     private Capability treeFellingCapability(
             RuntimePluginDescriptor plugin,
             boolean mustSneak,
             int maxChain,
-            boolean needCorrectTool) {
+            boolean needCorrectTool,
+            boolean sameBlockOnly) {
 
         String trigger =
                 mustSneak
@@ -156,7 +196,8 @@ public final class VeinMinerIntegration
                 commonConstraints(
                         maxChain,
                         needCorrectTool,
-                        mustSneak));
+                        mustSneak,
+                        sameBlockOnly));
     }
 
     private CapabilitySource source(
@@ -171,12 +212,36 @@ public final class VeinMinerIntegration
     private Map<String, Object> commonConstraints(
             int maxChain,
             boolean needCorrectTool,
-            boolean mustSneak) {
+            boolean mustSneak,
+            boolean sameBlockOnly) {
 
         return Map.<String, Object>of(
                 "max_chain", maxChain,
                 "correct_tool_required", needCorrectTool,
-                "must_sneak", mustSneak);
+                "must_sneak", mustSneak,
+                "same_block_only", sameBlockOnly);
+    }
+
+    private boolean booleanOverride(
+            JsonObject override,
+            String key,
+            boolean fallback) {
+
+        return override.has(key)
+                && !override.get(key).isJsonNull()
+                ? override.get(key).getAsBoolean()
+                : fallback;
+    }
+
+    private int intOverride(
+            JsonObject override,
+            String key,
+            int fallback) {
+
+        return override.has(key)
+                && !override.get(key).isJsonNull()
+                ? override.get(key).getAsInt()
+                : fallback;
     }
 
     private JsonObject readObject(Path path)
