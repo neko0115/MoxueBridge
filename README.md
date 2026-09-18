@@ -97,6 +97,7 @@ Available endpoints:
 GET /api/v1/status
 GET /api/v1/plugins
 GET /api/v1/capabilities
+GET /api/v1/resources
 ```
 
 Example local request:
@@ -198,6 +199,57 @@ not receive an invented exact scope even when `separateGroupMining=true`.
 group (`pickaxe` for Ores and `axe` for Logs). `merge_item_drops` reflects
 VeinMiner's global `mergeItemDrops` setting; VeinMiner does not apply a group
 override to that setting.
+
+## Resource and capability manifests
+
+Paper plugins can publish stable semantics without requiring a new hard-coded
+MoxueBridge integration for every resource or machine.
+
+If a plugin data folder contains:
+
+```text
+moxue-resources.json
+```
+
+MoxueBridge validates and publishes its authoritative resource descriptors
+through `GET /api/v1/resources`. A descriptor can declare:
+
+```text
+id
+kind
+aliases
+block_ids
+collected_item_ids
+minimum_drop_count
+tool_kind
+forbidden_enchantments
+capability_id
+related_blocks
+cleanup_policy
+confidence
+```
+
+For example a mod/plugin tree can describe a custom log, its custom leaves,
+the axe tool family, and whether leaves should naturally decay, be preserved,
+or be removed after felling. Ore-like resources can describe the source block
+and the item that actually enters inventory, so clients do not need to assume
+that block and drop names are identical.
+
+If a plugin data folder contains:
+
+```text
+moxue-capabilities.json
+```
+
+it can also declare bounded read-only capability metadata such as a custom
+crusher interaction. Capability constraints are restricted to primitive
+values and manifests are size/count bounded; malformed manifests fail closed.
+
+This manifest path is intentionally generic: MC_AI_Player consumes the
+normalized catalog/capability contract and does not need source-code changes
+for every new plugin resource. Loader-specific Fabric/NeoForge registry
+bridges remain a separate future server-side implementation of the same
+protocol; the current plugin discovers Paper plugin data folders.
 
 ## Security model
 
