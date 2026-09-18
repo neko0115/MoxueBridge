@@ -74,6 +74,10 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 true,
                 capability.constraints().get("must_sneak"));
+
+        assertEquals(
+                false,
+                capability.constraints().get("same_block_only"));
     }
 
     @Test
@@ -96,6 +100,99 @@ class VeinMinerIntegrationTest {
         assertEquals(
                 List.of("tree_felling", "vein_mining"),
                 sortedIds(capabilities));
+    }
+
+
+
+    @Test
+    void resolvesSeparateGroupMiningAndGroupOverrides()
+            throws Exception {
+
+        Files.writeString(
+                tempDir.resolve("settings.json"),
+                """
+                {
+                  "mustSneak": true,
+                  "maxChain": 8,
+                  "needCorrectTool": true,
+                  "separateGroupMining": true
+                }
+                """,
+                StandardCharsets.UTF_8);
+
+        Files.writeString(
+                tempDir.resolve("groups.json"),
+                """
+                [
+                  {
+                    "name": "Ores",
+                    "blocks": ["#c:ores"],
+                    "tools": ["#minecraft:pickaxes"],
+                    "override": {}
+                  },
+                  {
+                    "name": "Logs",
+                    "blocks": ["#minecraft:logs"],
+                    "tools": ["#minecraft:axes"],
+                    "override": {
+                      "mustSneak": false,
+                      "maxChain": 3,
+                      "needCorrectTool": false,
+                      "separateGroupMining": false
+                    }
+                  }
+                ]
+                """,
+                StandardCharsets.UTF_8);
+
+        var integration = new VeinMinerIntegration();
+
+        var capabilities = integration.discoverCapabilities(
+                descriptor("VeinMiner", true));
+
+        var veinMining = capabilities.stream()
+                .filter(capability ->
+                        capability.id().equals("vein_mining"))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(
+                "sneak_and_break",
+                veinMining.usage().trigger());
+        assertEquals(
+                8,
+                veinMining.constraints().get("max_chain"));
+        assertEquals(
+                true,
+                veinMining.constraints().get("correct_tool_required"));
+        assertEquals(
+                true,
+                veinMining.constraints().get("must_sneak"));
+        assertEquals(
+                true,
+                veinMining.constraints().get("same_block_only"));
+
+        var treeFelling = capabilities.stream()
+                .filter(capability ->
+                        capability.id().equals("tree_felling"))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(
+                "break",
+                treeFelling.usage().trigger());
+        assertEquals(
+                3,
+                treeFelling.constraints().get("max_chain"));
+        assertEquals(
+                false,
+                treeFelling.constraints().get("correct_tool_required"));
+        assertEquals(
+                false,
+                treeFelling.constraints().get("must_sneak"));
+        assertEquals(
+                false,
+                treeFelling.constraints().get("same_block_only"));
     }
 
     @Test
