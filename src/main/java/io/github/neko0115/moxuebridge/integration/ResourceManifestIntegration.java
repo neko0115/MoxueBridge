@@ -120,10 +120,6 @@ public final class ResourceManifestIntegration
             return List.copyOf(descriptors);
 
         } catch (IOException | RuntimeException ex) {
-            if (ex instanceof IntegrationException integration) {
-                throw integration;
-            }
-
             throw new IntegrationException(
                     "Failed to read resource manifest",
                     ex);
