@@ -168,6 +168,23 @@ If a compatible `Logs` group using axes exists, it additionally exposes:
 tree_felling
 ```
 
+For each VeinMiner-backed capability, MoxueBridge resolves the effective
+group settings (global settings overridden by the group's `override` object)
+and exposes semantic constraints including:
+
+```text
+max_chain
+correct_tool_required
+must_sneak
+same_block_only
+```
+
+`same_block_only` maps directly from VeinMiner's `separateGroupMining`.
+When it is `false`, blocks inside the same VeinMiner group may chain together;
+when it is `true`, only the exact mined block type chains. Missing
+`separateGroupMining` is treated as `false`, matching VeinMiner's default and
+failing closed for MC_AI_Player multi-block automation.
+
 ## Security model
 
 Version 0.1.0 is read-only.
