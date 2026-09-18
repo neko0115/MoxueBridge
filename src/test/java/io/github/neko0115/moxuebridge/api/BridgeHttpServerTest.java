@@ -202,7 +202,7 @@ class BridgeHttpServerTest {
                 "\"minimum_drop_count\":1"));
 
         assertTrue(response.body().contains(
-                "\"rubber_leaves\""));
+                "\"examplemod:rubber_leaves\""));
 
         assertTrue(response.body().contains(
                 "\"cleanup_policy\":\"natural_decay\""));
