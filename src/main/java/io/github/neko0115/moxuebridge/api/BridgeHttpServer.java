@@ -142,6 +142,14 @@ public final class BridgeHttpServer {
                                         registry.snapshot()
                                                 .capabilities()));
 
+                case "/api/v1/resources" ->
+                        sendJson(
+                                exchange,
+                                200,
+                                gson.toJson(
+                                        registry.snapshot()
+                                                .resources()));
+
                 default ->
                         sendJson(
                                 exchange,

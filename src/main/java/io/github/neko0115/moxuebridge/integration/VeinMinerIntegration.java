@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,6 +60,16 @@ public final class VeinMinerIntegration
                     settings.get("needCorrectTool")
                             .getAsBoolean();
 
+            boolean separateGroupMining =
+                    settings.has("separateGroupMining")
+                            && settings.get("separateGroupMining")
+                                    .getAsBoolean();
+
+            boolean mergeItemDrops =
+                    settings.has("mergeItemDrops")
+                            && settings.get("mergeItemDrops")
+                                    .getAsBoolean();
+
             List<Capability> capabilities =
                     new ArrayList<>();
 
@@ -69,22 +80,65 @@ public final class VeinMinerIntegration
                 String name =
                         group.get("name").getAsString();
 
+                JsonObject override =
+                        group.has("override")
+                                && group.get("override").isJsonObject()
+                                ? group.getAsJsonObject("override")
+                                : new JsonObject();
+
+                boolean effectiveMustSneak =
+                        booleanOverride(
+                                override,
+                                "mustSneak",
+                                mustSneak);
+
+                int effectiveMaxChain =
+                        intOverride(
+                                override,
+                                "maxChain",
+                                maxChain);
+
+                boolean effectiveNeedCorrectTool =
+                        booleanOverride(
+                                override,
+                                "needCorrectTool",
+                                needCorrectTool);
+
+                boolean effectiveSeparateGroupMining =
+                        booleanOverride(
+                                override,
+                                "separateGroupMining",
+                                separateGroupMining);
+
+                String exactBlock =
+                        singleExplicitBlock(group);
+
+                boolean effectiveSameBlockOnly =
+                        effectiveSeparateGroupMining
+                                || exactBlock != null;
+
                 if ("Ores".equalsIgnoreCase(name)) {
                     capabilities.add(
                             veinMiningCapability(
                                     plugin,
-                                    mustSneak,
-                                    maxChain,
-                                    needCorrectTool));
+                                    effectiveMustSneak,
+                                    effectiveMaxChain,
+                                    effectiveNeedCorrectTool,
+                                    effectiveSameBlockOnly,
+                                    mergeItemDrops,
+                                    exactBlock));
                 }
 
                 if ("Logs".equalsIgnoreCase(name)) {
                     capabilities.add(
                             treeFellingCapability(
                                     plugin,
-                                    mustSneak,
-                                    maxChain,
-                                    needCorrectTool));
+                                    effectiveMustSneak,
+                                    effectiveMaxChain,
+                                    effectiveNeedCorrectTool,
+                                    effectiveSameBlockOnly,
+                                    mergeItemDrops,
+                                    exactBlock));
                 }
             }
 
@@ -101,7 +155,10 @@ public final class VeinMinerIntegration
             RuntimePluginDescriptor plugin,
             boolean mustSneak,
             int maxChain,
-            boolean needCorrectTool) {
+            boolean needCorrectTool,
+            boolean sameBlockOnly,
+            boolean mergeItemDrops,
+            String exactBlock) {
 
         String trigger =
                 mustSneak
@@ -125,14 +182,21 @@ public final class VeinMinerIntegration
                 commonConstraints(
                         maxChain,
                         needCorrectTool,
-                        mustSneak));
+                        mustSneak,
+                        sameBlockOnly,
+                        mergeItemDrops,
+                        "pickaxe",
+                        exactBlock));
     }
 
     private Capability treeFellingCapability(
             RuntimePluginDescriptor plugin,
             boolean mustSneak,
             int maxChain,
-            boolean needCorrectTool) {
+            boolean needCorrectTool,
+            boolean sameBlockOnly,
+            boolean mergeItemDrops,
+            String exactBlock) {
 
         String trigger =
                 mustSneak
@@ -156,7 +220,11 @@ public final class VeinMinerIntegration
                 commonConstraints(
                         maxChain,
                         needCorrectTool,
-                        mustSneak));
+                        mustSneak,
+                        sameBlockOnly,
+                        mergeItemDrops,
+                        "axe",
+                        exactBlock));
     }
 
     private CapabilitySource source(
@@ -171,12 +239,89 @@ public final class VeinMinerIntegration
     private Map<String, Object> commonConstraints(
             int maxChain,
             boolean needCorrectTool,
-            boolean mustSneak) {
+            boolean mustSneak,
+            boolean sameBlockOnly,
+            boolean mergeItemDrops,
+            String toolKind,
+            String exactBlock) {
 
-        return Map.<String, Object>of(
-                "max_chain", maxChain,
-                "correct_tool_required", needCorrectTool,
-                "must_sneak", mustSneak);
+        Map<String, Object> constraints =
+                new HashMap<>();
+
+        constraints.put("max_chain", maxChain);
+        constraints.put(
+                "correct_tool_required",
+                needCorrectTool);
+        constraints.put("must_sneak", mustSneak);
+        constraints.put(
+                "same_block_only",
+                sameBlockOnly);
+        constraints.put(
+                "merge_item_drops",
+                mergeItemDrops);
+        constraints.put("tool_kind", toolKind);
+
+        if (exactBlock != null) {
+            constraints.put(
+                    "exact_block",
+                    exactBlock);
+        }
+
+        return Map.copyOf(constraints);
+    }
+
+    private String singleExplicitBlock(
+            JsonObject group) {
+
+        if (!group.has("blocks")
+                || !group.get("blocks").isJsonArray()) {
+            return null;
+        }
+
+        JsonArray blocks =
+                group.getAsJsonArray("blocks");
+
+        if (blocks.size() != 1) {
+            return null;
+        }
+
+        JsonElement only =
+                blocks.get(0);
+
+        if (!only.isJsonPrimitive()
+                || !only.getAsJsonPrimitive().isString()) {
+            return null;
+        }
+
+        String selector =
+                only.getAsString().trim();
+
+        return !selector.isEmpty()
+                && !selector.startsWith("#")
+                ? selector
+                : null;
+    }
+
+    private boolean booleanOverride(
+            JsonObject override,
+            String key,
+            boolean fallback) {
+
+        return override.has(key)
+                && !override.get(key).isJsonNull()
+                ? override.get(key).getAsBoolean()
+                : fallback;
+    }
+
+    private int intOverride(
+            JsonObject override,
+            String key,
+            int fallback) {
+
+        return override.has(key)
+                && !override.get(key).isJsonNull()
+                ? override.get(key).getAsInt()
+                : fallback;
     }
 
     private JsonObject readObject(Path path)
