@@ -9,6 +9,7 @@ import io.github.neko0115.moxuebridge.model.Capability;
 import io.github.neko0115.moxuebridge.model.CapabilitySource;
 import io.github.neko0115.moxuebridge.model.CapabilityUsage;
 import io.github.neko0115.moxuebridge.model.PluginInfo;
+import io.github.neko0115.moxuebridge.model.ResourceDescriptor;
 import io.github.neko0115.moxuebridge.registry.CapabilityRegistry;
 import io.github.neko0115.moxuebridge.security.BearerTokenValidator;
 
@@ -61,7 +62,23 @@ class BridgeHttpServerTest {
                                         "sneak_and_break",
                                         "蹲下並使用十字鎬挖掘礦物"),
                                 Map.of(
-                                        "max_chain", 100))));
+                                        "max_chain", 100))),
+                List.of(
+                        new ResourceDescriptor(
+                                "examplemod:rubber_log",
+                                "log",
+                                List.of(),
+                                List.of("examplemod:rubber_log"),
+                                List.of("examplemod:rubber_log"),
+                                1,
+                                "axe",
+                                List.of(),
+                                "tree_felling",
+                                Map.of(
+                                        "leaves",
+                                        List.of("examplemod:rubber_leaves")),
+                                "natural_decay",
+                                "authoritative")));
 
         var registry =
                 new CapabilityRegistry(snapshot);
@@ -168,6 +185,27 @@ class BridgeHttpServerTest {
 
         assertTrue(response.body().contains(
                 "\"max_chain\":100"));
+    }
+
+    @Test
+    void exposesResourceCatalog() throws Exception {
+        var response = sendGet(
+                "/api/v1/resources",
+                "Bearer test-token");
+
+        assertEquals(200, response.statusCode());
+
+        assertTrue(response.body().contains(
+                "\"id\":\"examplemod:rubber_log\""));
+
+        assertTrue(response.body().contains(
+                "\"minimum_drop_count\":1"));
+
+        assertTrue(response.body().contains(
+                "\"rubber_leaves\""));
+
+        assertTrue(response.body().contains(
+                "\"cleanup_policy\":\"natural_decay\""));
     }
 
     @Test
