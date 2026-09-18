@@ -6,6 +6,7 @@ import io.github.neko0115.moxuebridge.model.BridgeSnapshot;
 import io.github.neko0115.moxuebridge.model.BridgeStatus;
 import io.github.neko0115.moxuebridge.model.Capability;
 import io.github.neko0115.moxuebridge.model.PluginInfo;
+import io.github.neko0115.moxuebridge.model.ResourceDescriptor;
 import io.github.neko0115.moxuebridge.model.RuntimePluginDescriptor;
 
 import java.util.ArrayList;
@@ -47,6 +48,9 @@ public final class RegistryBuilder {
         List<Capability> capabilities =
                 new ArrayList<>();
 
+        List<ResourceDescriptor> resources =
+                new ArrayList<>();
+
         for (RuntimePluginDescriptor descriptor : descriptors) {
 
             List<PluginIntegration> supporting =
@@ -76,6 +80,10 @@ public final class RegistryBuilder {
                             integration.discoverCapabilities(
                                     descriptor));
 
+                    resources.addAll(
+                            integration.discoverResources(
+                                    descriptor));
+
                 } catch (IntegrationException ex) {
                     logger.warning(
                             "Integration failed for plugin "
@@ -95,10 +103,15 @@ public final class RegistryBuilder {
                 Comparator.comparing(
                         Capability::id));
 
+        resources.sort(
+                Comparator.comparing(
+                        ResourceDescriptor::id));
+
         return new BridgeSnapshot(
                 timestampSupplier.get(),
                 statusSupplier.get(),
                 plugins,
-                capabilities);
+                capabilities,
+                resources);
     }
 }
