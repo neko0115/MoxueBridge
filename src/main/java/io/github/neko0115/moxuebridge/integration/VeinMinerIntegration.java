@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -109,9 +110,12 @@ public final class VeinMinerIntegration
                                 "separateGroupMining",
                                 separateGroupMining);
 
+                String exactBlock =
+                        singleExplicitBlock(group);
+
                 boolean effectiveSameBlockOnly =
                         effectiveSeparateGroupMining
-                                || hasSingleExplicitBlock(group);
+                                || exactBlock != null;
 
                 if ("Ores".equalsIgnoreCase(name)) {
                     capabilities.add(
@@ -121,7 +125,8 @@ public final class VeinMinerIntegration
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
                                     effectiveSameBlockOnly,
-                                    mergeItemDrops));
+                                    mergeItemDrops,
+                                    exactBlock));
                 }
 
                 if ("Logs".equalsIgnoreCase(name)) {
@@ -132,7 +137,8 @@ public final class VeinMinerIntegration
                                     effectiveMaxChain,
                                     effectiveNeedCorrectTool,
                                     effectiveSameBlockOnly,
-                                    mergeItemDrops));
+                                    mergeItemDrops,
+                                    exactBlock));
                 }
             }
 
@@ -151,7 +157,8 @@ public final class VeinMinerIntegration
             int maxChain,
             boolean needCorrectTool,
             boolean sameBlockOnly,
-            boolean mergeItemDrops) {
+            boolean mergeItemDrops,
+            String exactBlock) {
 
         String trigger =
                 mustSneak
@@ -178,7 +185,8 @@ public final class VeinMinerIntegration
                         mustSneak,
                         sameBlockOnly,
                         mergeItemDrops,
-                        "pickaxe"));
+                        "pickaxe",
+                        exactBlock));
     }
 
     private Capability treeFellingCapability(
@@ -187,7 +195,8 @@ public final class VeinMinerIntegration
             int maxChain,
             boolean needCorrectTool,
             boolean sameBlockOnly,
-            boolean mergeItemDrops) {
+            boolean mergeItemDrops,
+            String exactBlock) {
 
         String trigger =
                 mustSneak
@@ -214,7 +223,8 @@ public final class VeinMinerIntegration
                         mustSneak,
                         sameBlockOnly,
                         mergeItemDrops,
-                        "axe"));
+                        "axe",
+                        exactBlock));
     }
 
     private CapabilitySource source(
@@ -232,30 +242,47 @@ public final class VeinMinerIntegration
             boolean mustSneak,
             boolean sameBlockOnly,
             boolean mergeItemDrops,
-            String toolKind) {
+            String toolKind,
+            String exactBlock) {
 
-        return Map.<String, Object>of(
-                "max_chain", maxChain,
-                "correct_tool_required", needCorrectTool,
-                "must_sneak", mustSneak,
-                "same_block_only", sameBlockOnly,
-                "merge_item_drops", mergeItemDrops,
-                "tool_kind", toolKind);
+        Map<String, Object> constraints =
+                new HashMap<>();
+
+        constraints.put("max_chain", maxChain);
+        constraints.put(
+                "correct_tool_required",
+                needCorrectTool);
+        constraints.put("must_sneak", mustSneak);
+        constraints.put(
+                "same_block_only",
+                sameBlockOnly);
+        constraints.put(
+                "merge_item_drops",
+                mergeItemDrops);
+        constraints.put("tool_kind", toolKind);
+
+        if (exactBlock != null) {
+            constraints.put(
+                    "exact_block",
+                    exactBlock);
+        }
+
+        return Map.copyOf(constraints);
     }
 
-    private boolean hasSingleExplicitBlock(
+    private String singleExplicitBlock(
             JsonObject group) {
 
         if (!group.has("blocks")
                 || !group.get("blocks").isJsonArray()) {
-            return false;
+            return null;
         }
 
         JsonArray blocks =
                 group.getAsJsonArray("blocks");
 
         if (blocks.size() != 1) {
-            return false;
+            return null;
         }
 
         JsonElement only =
@@ -263,14 +290,16 @@ public final class VeinMinerIntegration
 
         if (!only.isJsonPrimitive()
                 || !only.getAsJsonPrimitive().isString()) {
-            return false;
+            return null;
         }
 
         String selector =
                 only.getAsString().trim();
 
         return !selector.isEmpty()
-                && !selector.startsWith("#");
+                && !selector.startsWith("#")
+                ? selector
+                : null;
     }
 
     private boolean booleanOverride(
