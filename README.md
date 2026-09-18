@@ -177,6 +177,8 @@ max_chain
 correct_tool_required
 must_sneak
 same_block_only
+merge_item_drops
+tool_kind
 ```
 
 `same_block_only` maps directly from VeinMiner's `separateGroupMining`.
@@ -184,6 +186,11 @@ When it is `false`, blocks inside the same VeinMiner group may chain together;
 when it is `true`, only the exact mined block type chains. Missing
 `separateGroupMining` is treated as `false`, matching VeinMiner's default and
 failing closed for MC_AI_Player multi-block automation.
+
+`tool_kind` exposes the stable semantic tool family required by the integrated
+group (`pickaxe` for Ores and `axe` for Logs). `merge_item_drops` reflects
+VeinMiner's global `mergeItemDrops` setting; VeinMiner does not apply a group
+override to that setting.
 
 ## Security model
 
