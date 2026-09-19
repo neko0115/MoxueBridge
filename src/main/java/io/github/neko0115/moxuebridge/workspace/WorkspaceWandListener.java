@@ -195,7 +195,7 @@ implements Listener {
             case THE_END -> "the_end";
             case CUSTOM ->
                     world.getKey()
-                            .asString();
+                            .toString();
         };
     }
 }

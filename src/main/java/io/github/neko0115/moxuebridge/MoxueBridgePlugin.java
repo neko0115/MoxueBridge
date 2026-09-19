@@ -13,6 +13,8 @@ import io.github.neko0115.moxuebridge.lifecycle.PluginLifecycleListener;
 import io.github.neko0115.moxuebridge.model.BridgeStatus;
 import io.github.neko0115.moxuebridge.registry.CapabilityRegistry;
 import io.github.neko0115.moxuebridge.security.BearerTokenValidator;
+import io.github.neko0115.moxuebridge.workspace.WorkspaceSelectionStore;
+import io.github.neko0115.moxuebridge.workspace.WorkspaceWandListener;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -137,11 +139,23 @@ public final class MoxueBridgePlugin extends JavaPlugin {
                     new BearerTokenValidator(
                             bridgeConfig.token());
 
+            var workspaceSelections =
+                    new WorkspaceSelectionStore();
+
+            getServer()
+                    .getPluginManager()
+                    .registerEvents(
+                            new WorkspaceWandListener(
+                                    this,
+                                    workspaceSelections),
+                            this);
+
             bridgeHttpServer =
                     new BridgeHttpServer(
                             bridgeConfig.bindAddress(),
                             bridgeConfig.port(),
                             capabilityRegistry,
+                            workspaceSelections,
                             tokenValidator,
                             getLogger());
 

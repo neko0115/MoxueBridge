@@ -9,6 +9,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import io.github.neko0115.moxuebridge.registry.CapabilityRegistry;
 import io.github.neko0115.moxuebridge.security.BearerTokenValidator;
+import io.github.neko0115.moxuebridge.workspace.WorkspaceSelectionStore;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,6 +24,7 @@ public final class BridgeHttpServer {
     private final String bindAddress;
     private final int port;
     private final CapabilityRegistry registry;
+    private final WorkspaceSelectionStore workspaceSelections;
     private final BearerTokenValidator tokenValidator;
     private final Logger logger;
     private final Gson gson;
@@ -36,9 +38,27 @@ public final class BridgeHttpServer {
             BearerTokenValidator tokenValidator,
             Logger logger) {
 
+        this(
+                bindAddress,
+                port,
+                registry,
+                new WorkspaceSelectionStore(),
+                tokenValidator,
+                logger);
+    }
+
+    public BridgeHttpServer(
+            String bindAddress,
+            int port,
+            CapabilityRegistry registry,
+            WorkspaceSelectionStore workspaceSelections,
+            BearerTokenValidator tokenValidator,
+            Logger logger) {
+
         this.bindAddress = bindAddress;
         this.port = port;
         this.registry = registry;
+        this.workspaceSelections = workspaceSelections;
         this.tokenValidator = tokenValidator;
         this.logger = logger;
 
@@ -149,6 +169,14 @@ public final class BridgeHttpServer {
                                 gson.toJson(
                                         registry.snapshot()
                                                 .resources()));
+
+                case "/api/v1/workspace-selections" ->
+                        sendJson(
+                                exchange,
+                                200,
+                                gson.toJson(
+                                        workspaceSelections
+                                                .snapshot()));
 
                 default ->
                         sendJson(

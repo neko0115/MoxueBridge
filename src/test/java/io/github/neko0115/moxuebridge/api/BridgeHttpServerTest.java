@@ -12,6 +12,8 @@ import io.github.neko0115.moxuebridge.model.PluginInfo;
 import io.github.neko0115.moxuebridge.model.ResourceDescriptor;
 import io.github.neko0115.moxuebridge.registry.CapabilityRegistry;
 import io.github.neko0115.moxuebridge.security.BearerTokenValidator;
+import io.github.neko0115.moxuebridge.workspace.WorkspaceSelectionPoint;
+import io.github.neko0115.moxuebridge.workspace.WorkspaceSelectionStore;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,6 +32,7 @@ class BridgeHttpServerTest {
     private BridgeHttpServer server;
     private HttpClient client;
     private String baseUrl;
+    private WorkspaceSelectionStore workspaceSelections;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -83,10 +86,14 @@ class BridgeHttpServerTest {
         var registry =
                 new CapabilityRegistry(snapshot);
 
+        workspaceSelections =
+                new WorkspaceSelectionStore();
+
         server = new BridgeHttpServer(
                 "127.0.0.1",
                 0,
                 registry,
+                workspaceSelections,
                 new BearerTokenValidator("test-token"),
                 Logger.getLogger(
                         BridgeHttpServerTest.class.getName()));
@@ -206,6 +213,69 @@ class BridgeHttpServerTest {
 
         assertTrue(response.body().contains(
                 "\"cleanup_policy\":\"natural_decay\""));
+    }
+
+    @Test
+    void exposesAuthenticatedWorkspaceSelections()
+            throws Exception {
+
+        workspaceSelections.setPointA(
+                "world-1",
+                "overworld",
+                "player-1",
+                "Boss",
+                new WorkspaceSelectionPoint(
+                        0,
+                        64,
+                        0));
+
+        workspaceSelections.setPointB(
+                "world-1",
+                "overworld",
+                "player-1",
+                "Boss",
+                new WorkspaceSelectionPoint(
+                        8,
+                        64,
+                        8));
+
+        var response = sendGet(
+                "/api/v1/workspace-selections",
+                "Bearer test-token");
+
+        assertEquals(200, response.statusCode());
+
+        var body = response.body();
+
+        assertTrue(body.contains(
+                "\"version\":1"));
+        assertTrue(body.contains(
+                "\"generated_at\":"));
+        assertTrue(body.contains(
+                "\"player_id\":\"player-1\""));
+        assertTrue(body.contains(
+                "\"player_name\":\"Boss\""));
+        assertTrue(body.contains(
+                "\"dimension\":\"overworld\""));
+        assertTrue(body.contains(
+                "\"point_a\":{\"x\":0,\"y\":64,\"z\":0}"));
+        assertTrue(body.contains(
+                "\"point_b\":{\"x\":8,\"y\":64,\"z\":8}"));
+        assertTrue(
+                !body.contains("world-1"));
+    }
+
+    @Test
+    void workspaceSelectionsRequireAuthentication()
+            throws Exception {
+
+        var response = sendGet(
+                "/api/v1/workspace-selections",
+                null);
+
+        assertEquals(
+                401,
+                response.statusCode());
     }
 
     @Test
